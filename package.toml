@@ -1,0 +1,8 @@
+name = "qemu"
+version = "0.1.0"
+collection = "Provisioner"
+platforms = ["Client"]
+
+providers = ["ServiceProvider"]
+retry_times = 0
+retry_interval = 0

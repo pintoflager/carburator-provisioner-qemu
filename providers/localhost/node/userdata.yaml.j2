@@ -1,0 +1,7 @@
+#cloud-config
+password: {{ password }}
+chpasswd:
+  expire: False
+ssh_pwauth: {{ pw_auth | default(False) }}
+ssh_authorized_keys:
+  - {{ root_pubkey }}
