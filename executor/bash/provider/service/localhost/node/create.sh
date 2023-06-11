@@ -3,15 +3,15 @@
 carburator print terminal info "Invoking localhost Qemu server provisioner..."
 
 resource="node"
-resource_dir="$INVOCATION_PATH/terraform"
+resource_dir="$INVOCATION_PATH/cloudinit"
 data_dir="$PROVISIONER_PATH/providers/localhost"
-qemu_sourcedir="$data_dir/$resource"
+cloudinit_sourcedir="$data_dir/$resource"
 
 # Resource data paths
 # TODO: this must be pointless as we know all the players here?
 node_out="$data_dir/$resource.json"
 
-# Make sure terraform resource dir exist.
+# Make sure cloudinit resource dir exist.
 mkdir -p "$resource_dir"
 
 root_pubkey=$(carburator get env ROOT_SSH_PUBKEY -p .exec.env)
@@ -22,37 +22,33 @@ if [[ -z $root_pubkey ]]; then
     exit 120
 fi
 
-# Read pubkey to string
-pubkey=$(head -n 1 "$root_pubkey")
-
-# Copy terraform files from package to execution dir.
+# Copy cloudinit files from package to execution dir.
 # This way files can be modified and package update won't overwrite
 # the changes.
 while read -r j2_tpl_file; do
-	# Filename to template. Extensions removed.
 	file=$(basename "$j2_tpl_file")
-	name="${file%%.*}"
 
 	cp -n "$j2_tpl_file" "$resource_dir/$file"
-
-	if [[ $name == "userdata" && ! -e $resource_dir/$name.yaml ]]; then
-		# Run templater for userdata which is the same for all nodes.
-		pw=$(carburator fn random-pass -l 15)
-		pwau=$(carburator get toml defaults.ssh_password_auth boolean \
-			-p "$PROJECT_ROOT/project.toml")
-
-		carburator fn tpl "$resource_dir/$file" \
-			-k "password=$pw" \
-			-k "root_pubkey=$pubkey" \
-			-k "pw_auth=$pwau"
-	fi
-done < <(find "$qemu_sourcedir" -maxdepth 1 -iname '*.tf')
+done < <(find "$cloudinit_sourcedir" -maxdepth 1 -iname '*.j2')
 
 # Make sure we got the metadata template from sources.
-if [[ ! -e $resource_dir/metadata.yaml.j2 ]]; then
+if [[ ! -e $resource_dir/metadata.yaml.j2 || ! -e $resource_dir/userdata.yaml.j2 ]]; then
 	carburator print terminal error \
-		"Mising metadata.yaml.j2 template for node OS image generation."
+		"Missing required templates for node OS image generation."
 	exit 120
+fi
+
+if [[ ! -e $resource_dir/userdata.yaml ]]; then
+	# Run templater for userdata which is the same for all nodes.
+	pw=$(carburator fn random-pass -sl 15)
+	pubkey=$(head -n 1 "$root_pubkey")
+	pwau=$(carburator get toml defaults.ssh_password_auth boolean \
+		-p "$PROJECT_ROOT/project.toml")
+
+	carburator fn tpl "$resource_dir/userdata.yaml.j2" \
+		-k "password=$pw" \
+		-k "root_pubkey=$pubkey" \
+		-k "pw_auth=$pwau"
 fi
 
 # Recommended to have empty vendor data file
@@ -91,11 +87,12 @@ provisioner_call() {
 		file="${image##*/}"
 
 		if [[ ! -e $1/$file ]]; then
-			wget -P "$1" "$image"
+			wget -P "$1/" "$image"
 		fi
 
 		# Build local cloud init os image.
-		cloud-localds -i "$1/$file" "$1/userdata.yaml" "$1/metadata.yaml"; exitcode=$?
+		cloud-localds -i "seed-$name.img" "$1/userdata.yaml" "$1/metadata.yaml"
+		exitcode=$?
 
 		if [[ $exitcode -gt 0 ]]; then
 			carburator print terminal error \

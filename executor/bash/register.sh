@@ -20,11 +20,11 @@ if ! carburator has program qemu-system-x86_64; then
 
     if carburator has program apt; then
         sudo apt-get -y update
-        sudo apt-get -y install qemu
+        sudo apt-get -y install qemu qemu-kvm
 
     elif carburator has program pacman; then
         sudo pacman update
-        sudo pacman -Sy qemu
+        sudo pacman -Sy qemu qemu-kvm
 
     elif carburator has program yum; then
         sudo yum makecache --refresh
