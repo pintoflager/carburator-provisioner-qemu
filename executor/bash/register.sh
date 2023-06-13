@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
 # ATTENTION: Supports only client nodes, pointless to read role from $1
+if [[ $1 == "server" ]]; then
+    carburator print terminal error \
+        "Provisioners register only on client nodes. Package configuration error."
+    exit 120
+fi
 
 if ! carburator has program qemu-system-x86_64; then
     carburator print terminal warn "Missing qemu-system-x86_64 on client machine."
