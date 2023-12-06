@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-carburator print terminal info "Invoking localhost Qemu server provisioner..."
+carburator log info "Invoking localhost Qemu server provisioner..."
 
 resource="node"
 resource_dir="$INVOCATION_PATH/cloudinit"
@@ -17,7 +17,7 @@ mkdir -p "$resource_dir"
 root_pubkey=$(carburator get env ROOT_SSH_PUBKEY -p .exec.env)
 
 if [[ -z $root_pubkey ]]; then
-    carburator print terminal error \
+    carburator log error \
         "Unable to find path to root public SSH key from .exec.env"
     exit 120
 fi
@@ -33,7 +33,7 @@ done < <(find "$cloudinit_sourcedir" -maxdepth 1 -iname '*.j2')
 
 # Make sure we got the metadata template from sources.
 if [[ ! -e $resource_dir/metadata.yaml.j2 || ! -e $resource_dir/userdata.yaml.j2 ]]; then
-	carburator print terminal error \
+	carburator log error \
 		"Missing required templates for node OS image generation."
 	exit 120
 fi
@@ -59,7 +59,7 @@ provisioner_call() {
 	node_len=$(carburator get json nodes array -p .exec.json | wc -l)
 
 	if [[ -z $node_len || $node_len -lt 1 ]]; then
-		carburator print terminal error "Could not load nodes from .exec.json"
+		carburator log error "Could not load nodes from .exec.json"
 		exit 120
 	fi
 
@@ -69,7 +69,7 @@ provisioner_call() {
 		image=$(carburator get json "nodes.$i.os.img" string -p .exec.json)
 
 		if [[ -z $image ]]; then
-			carburator print terminal error \
+			carburator log error \
 				"Node with index '$i' is missing OS img field."
 			exit 120
 		fi
@@ -95,7 +95,7 @@ provisioner_call() {
 		exitcode=$?
 
 		if [[ $exitcode -gt 0 ]]; then
-			carburator print terminal error \
+			carburator log error \
 				"Failed to build OS image from '$file'"
 			exit 120
 		fi
@@ -135,7 +135,7 @@ provisioner_call() {
 provisioner_call "$resource_dir"; exitcode=$?
 
 if [[ $exitcode -eq 0 ]]; then
-	carburator print terminal success \
+	carburator log success \
 		"Server nodes created successfully with Qemu."
 
 	len=$(carburator get json node.value array -p "$node_out" | wc -l)
@@ -144,7 +144,7 @@ if [[ $exitcode -eq 0 ]]; then
 		node_uuid=$(carburator get json "node.value.$i.labels.uuid" string -p "$node_out")
 
 		name=$(carburator get json "node.value.$i.name" string -p "$node_out")
-		carburator print terminal info "Locking node '$name' provisioner to Qemu..."
+		carburator log info "Locking node '$name' provisioner to Qemu..."
 		carburator node lock-provisioner qemu --node-uuid "$node_uuid"
 
 		# TODO:
@@ -156,7 +156,7 @@ if [[ $exitcode -eq 0 ]]; then
 
 		# Register block and extract first (and the only) ip from it.
 		if [[ -n $ipv4 && $ipv4 != null ]]; then
-			carburator print terminal info \
+			carburator log info \
 				"Extracting IPv4 address blocks from node '$name' IP..."
 
 			address_block_uuid=$(carburator register net-block "$ipv4" \
@@ -177,7 +177,7 @@ if [[ $exitcode -eq 0 ]]; then
 		
 		# Register block and the IP that Hetzner has set up for the node.
 		if [[ -n $ipv6_block && $ipv6_block != null ]]; then
-			carburator print terminal info \
+			carburator log info \
 				"Extracting IPv6 address blocks from node '$name' IP..."
 
 			ipv6=$(carburator get json "node.value.$i.ipv6" string -p "$node_out")
@@ -197,13 +197,13 @@ if [[ $exitcode -eq 0 ]]; then
 		fi
 	done
 
-	carburator print terminal success "IP address blocks registered."
+	carburator log success "IP address blocks registered."
 elif [[ $exitcode -eq 110 ]]; then
-	carburator print terminal error \
+	carburator log error \
 		"Qemu provisioner failed with exitcode $exitcode, allow retry..."
 	exit 110
 else
-	carburator print terminal error \
+	carburator log error \
 		"Qemu provisioner failed with exitcode $exitcode"
 	exit 120
 fi

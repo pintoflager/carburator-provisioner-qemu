@@ -2,13 +2,13 @@
 
 # ATTENTION: Supports only client nodes, pointless to read role from $1
 if [[ $1 == "server" ]]; then
-    carburator print terminal error \
+    carburator log error \
         "Provisioners register only on client nodes. Package configuration error."
     exit 120
 fi
 
 if ! carburator has program qemu-system-x86_64; then
-    carburator print terminal warn "Missing qemu-system-x86_64 on client machine."
+    carburator log warn "Missing qemu-system-x86_64 on client machine."
 
     carburator prompt yes-no \
         "Should we try to install qemu?" \
@@ -20,7 +20,7 @@ if ! carburator has program qemu-system-x86_64; then
     fi
 
     # TODO: Untested below.
-    carburator print terminal warn \
+    carburator log warn \
       "Missing required program Qemu. Trying to install it before proceeding..."
 
     if carburator has program apt; then
@@ -40,16 +40,16 @@ if ! carburator has program qemu-system-x86_64; then
         sudo dnf -y install @virtualization
 
     else
-        carburator print terminal error \
+        carburator log error \
             "Unable to detect package manager from client node linux"
         exit 120
     fi
 else
-    carburator print terminal success "Qemu found from the client"
+    carburator log success "Qemu found from the client"
 fi
 
 if ! carburator has program cloud-localds; then
-    carburator print terminal warn "Missing cloud-localds on client machine."
+    carburator log warn "Missing cloud-localds on client machine."
 
     carburator prompt yes-no \
         "Should we try to install cloud-localds?" \
@@ -60,13 +60,13 @@ if ! carburator has program cloud-localds; then
       exit 120
     fi
 else
-    carburator print terminal success \
+    carburator log success \
       "Localhost version of cloud init (cloud-localds) found from the client"
     exit 0
 fi
 
 # TODO: Untested below.
-carburator print terminal warn \
+carburator log warn \
   "Missing required program cloud-localds. Trying to install it before proceeding..."
 
 if carburator has program apt; then
@@ -86,7 +86,7 @@ elif carburator has program dnf; then
     sudo dnf install cloud-utils -y
 
 else
-    carburator print terminal error \
+    carburator log error \
         "Unable to detect package manager from client node linux"
     exit 120
 fi
