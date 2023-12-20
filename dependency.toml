@@ -1,10 +1,4 @@
-# optional: bool,
-# optional_with: Option<Vec<String>>,
-# version: Option<VersionReq>,
-# on_level: DepOnLevel,
-# collection: PackageType,
-
 [dependency.bash]
 optional = false
-on_level = "Client" # Node | Cluster | Project | Client
+scope = "Client" # Node | Cluster | Project | Client
 collection = "Executor"
